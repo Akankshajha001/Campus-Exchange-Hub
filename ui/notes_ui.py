@@ -3,6 +3,19 @@ Notes Exchange UI - User interface for notes sharing
 """
 
 import streamlit as st
+st.markdown(
+    """
+    <style>
+    /* Make all Streamlit form labels dark and bold */
+    label, .stTextInput label, .stSelectbox label, .stTextArea label, .css-1c7y2kd, .css-1n76uvr {
+        color: #222 !important;
+        font-weight: 700 !important;
+        background: transparent !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 from services.notes_service import (
     upload_note,
     get_notes_by_subject,

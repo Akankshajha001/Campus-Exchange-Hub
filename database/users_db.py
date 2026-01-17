@@ -1,63 +1,122 @@
 """
-User and Session Database - Simple in-memory user tracking
+User and Session Database - SQLite persistent user tracking
 """
 
+import sqlite3
 from typing import Dict, Optional
+import os
 
-# Current user session data
-current_user: Dict[str, Optional[str]] = {
-    'name': None,
-    'roll_no': None,
-    'email': None,
-    'session_id': None
-}
+DB_PATH = os.path.join(os.path.dirname(__file__), 'users.db')
 
-# User activity sessions
-user_sessions: Dict[str, Dict] = {}
+def _get_conn():
+    return sqlite3.connect(DB_PATH)
+
+def _init_db():
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        session_id TEXT PRIMARY KEY,
+        name TEXT,
+        roll_no TEXT,
+        email TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS user_activity (
+        session_id TEXT PRIMARY KEY,
+        items_reported INTEGER DEFAULT 0,
+        notes_uploaded INTEGER DEFAULT 0,
+        notes_downloaded INTEGER DEFAULT 0,
+        FOREIGN KEY(session_id) REFERENCES users(session_id)
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS current_user (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        session_id TEXT
+    )''')
+    # Ensure there is always one row in current_user
+    c.execute('INSERT OR IGNORE INTO current_user (id, session_id) VALUES (1, NULL)')
+    conn.commit()
+    conn.close()
+
+_init_db()
 
 def set_current_user(name: str, roll_no: str, email: str):
-    """Set the current user information"""
-    current_user['name'] = name
-    current_user['roll_no'] = roll_no
-    current_user['email'] = email
-    current_user['session_id'] = f"{roll_no}_{name.replace(' ', '_')}"
-    
-    # Track in user sessions
-    if current_user['session_id'] not in user_sessions:
-        user_sessions[current_user['session_id']] = {
-            'name': name,
-            'roll_no': roll_no,
-            'email': email,
-            'items_reported': 0,
-            'notes_uploaded': 0,
-            'notes_downloaded': 0
-        }
+    """Set the current user information and track in DB"""
+    session_id = f"{roll_no}_{name.replace(' ', '_')}"
+    conn = _get_conn()
+    c = conn.cursor()
+    # Insert or update user
+    c.execute('''INSERT OR REPLACE INTO users (session_id, name, roll_no, email) VALUES (?, ?, ?, ?)''',
+              (session_id, name, roll_no, email))
+    # Insert activity row if not exists
+    c.execute('''INSERT OR IGNORE INTO user_activity (session_id) VALUES (?)''', (session_id,))
+    # Set current user
+    c.execute('''UPDATE current_user SET session_id = ? WHERE id = 1''', (session_id,))
+    conn.commit()
+    conn.close()
 
 def get_current_user() -> Dict:
-    """Get current user information"""
-    return current_user.copy()
+    """Get current user information from DB"""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('SELECT session_id FROM current_user WHERE id = 1')
+    row = c.fetchone()
+    if not row or not row[0]:
+        conn.close()
+        return {'name': None, 'roll_no': None, 'email': None, 'session_id': None}
+    session_id = row[0]
+    c.execute('SELECT name, roll_no, email FROM users WHERE session_id = ?', (session_id,))
+    user_row = c.fetchone()
+    conn.close()
+    if user_row:
+        return {'name': user_row[0], 'roll_no': user_row[1], 'email': user_row[2], 'session_id': session_id}
+    else:
+        return {'name': None, 'roll_no': None, 'email': None, 'session_id': None}
 
 def is_logged_in() -> bool:
-    """Check if a user is logged in"""
-    return current_user['name'] is not None
+    """Check if a user is logged in (in DB)"""
+    user = get_current_user()
+    return user['name'] is not None
 
 def logout():
-    """Logout current user"""
-    current_user['name'] = None
-    current_user['roll_no'] = None
-    current_user['email'] = None
-    current_user['session_id'] = None
+    """Logout current user (in DB)"""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('UPDATE current_user SET session_id = NULL WHERE id = 1')
+    conn.commit()
+    conn.close()
 
 def update_user_activity(activity_type: str):
-    """Update user activity count"""
-    if current_user['session_id'] and current_user['session_id'] in user_sessions:
-        if activity_type == 'item_reported':
-            user_sessions[current_user['session_id']]['items_reported'] += 1
-        elif activity_type == 'note_uploaded':
-            user_sessions[current_user['session_id']]['notes_uploaded'] += 1
-        elif activity_type == 'note_downloaded':
-            user_sessions[current_user['session_id']]['notes_downloaded'] += 1
+    """Update user activity count in DB"""
+    user = get_current_user()
+    session_id = user['session_id']
+    if not session_id:
+        return
+    conn = _get_conn()
+    c = conn.cursor()
+    if activity_type == 'item_reported':
+        c.execute('UPDATE user_activity SET items_reported = items_reported + 1 WHERE session_id = ?', (session_id,))
+    elif activity_type == 'note_uploaded':
+        c.execute('UPDATE user_activity SET notes_uploaded = notes_uploaded + 1 WHERE session_id = ?', (session_id,))
+    elif activity_type == 'note_downloaded':
+        c.execute('UPDATE user_activity SET notes_downloaded = notes_downloaded + 1 WHERE session_id = ?', (session_id,))
+    conn.commit()
+    conn.close()
 
 def get_all_users() -> Dict:
-    """Get all user sessions"""
-    return user_sessions.copy()
+    """Get all user sessions and activity from DB"""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('''SELECT u.session_id, u.name, u.roll_no, u.email, a.items_reported, a.notes_uploaded, a.notes_downloaded
+                 FROM users u LEFT JOIN user_activity a ON u.session_id = a.session_id''')
+    rows = c.fetchall()
+    conn.close()
+    result = {}
+    for row in rows:
+        result[row[0]] = {
+            'name': row[1],
+            'roll_no': row[2],
+            'email': row[3],
+            'items_reported': row[4] or 0,
+            'notes_uploaded': row[5] or 0,
+            'notes_downloaded': row[6] or 0
+        }
+    return result

@@ -1,62 +1,97 @@
+
 """
-Lost & Found Database - In-memory storage using lists and dictionaries
+Lost & Found Database - SQLite persistent storage
 """
 
+import sqlite3
+import os
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 
-# Main data structure: List of dictionaries
-# Each dictionary represents one lost or found item
-lost_found_items: List[Dict] = [
-    {
-        'id': 1,
-        'type': 'lost',  # 'lost' or 'found'
-        'item_name': 'Black Water Bottle',
-        'category': 'Bottle',
-        'location': 'Library Ground Floor',
-        'description': 'Black steel water bottle with university logo',
-        'reporter_name': 'Rahul Kumar',
-        'reporter_contact': 'rahul@example.com',
-        'date': '2026-01-08',
-        'status': 'open',  # 'open', 'matched', 'claimed'
-        'matched_with': None,
-        'verification_code': '12345',
-        'image_path': None
-    },
-    {
-        'id': 2,
-        'type': 'found',
-        'item_name': 'Student ID Card',
-        'category': 'ID Card',
-        'location': 'Cafeteria',
-        'description': 'Student ID card - Name: Priya Sharma',
-        'reporter_name': 'Amit Singh',
-        'reporter_contact': 'amit@example.com',
-        'date': '2026-01-09',
-        'status': 'open',
-        'matched_with': None,
-        'verification_code': '67890',
-        'image_path': None
-    },
-    {
-        'id': 3,
-        'type': 'lost',
-        'item_name': 'Laptop Charger',
-        'category': 'Charger',
-        'location': 'Computer Lab',
-        'description': 'Dell laptop charger, 65W',
-        'reporter_name': 'Sneha Patel',
-        'reporter_contact': 'sneha@example.com',
-        'date': '2026-01-10',
-        'status': 'open',
-        'matched_with': None,
-        'verification_code': '54321',
-        'image_path': None
-    }
-]
+DB_PATH = os.path.join(os.path.dirname(__file__), 'lost_found.db')
 
-# Counter for generating new IDs
-item_id_counter = 4
+def _get_conn():
+    return sqlite3.connect(DB_PATH)
+
+def _init_db():
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS lost_found_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT,
+        item_name TEXT,
+        category TEXT,
+        location TEXT,
+        description TEXT,
+        reporter_name TEXT,
+        reporter_contact TEXT,
+        date TEXT,
+        status TEXT,
+        matched_with INTEGER,
+        verification_code TEXT,
+        image_path TEXT
+    )''')
+    conn.commit()
+    conn.close()
+
+_init_db()
+
+def add_item(item: Dict) -> int:
+    """Add a lost or found item to the database. Returns new item id."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('''INSERT INTO lost_found_items (
+        type, item_name, category, location, description, reporter_name, reporter_contact, date, status, matched_with, verification_code, image_path
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        item['type'], item['item_name'], item['category'], item['location'], item['description'],
+        item['reporter_name'], item['reporter_contact'], item.get('date', datetime.now().strftime('%Y-%m-%d')),
+        item.get('status', 'open'), item.get('matched_with'), item.get('verification_code'), item.get('image_path')
+    ))
+    item_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return item_id
+
+def get_all_items() -> List[Dict]:
+    """Get all lost and found items from the database."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('SELECT * FROM lost_found_items')
+    rows = c.fetchall()
+    conn.close()
+    keys = ['id', 'type', 'item_name', 'category', 'location', 'description', 'reporter_name', 'reporter_contact', 'date', 'status', 'matched_with', 'verification_code', 'image_path']
+    return [dict(zip(keys, row)) for row in rows]
+
+def get_item_by_id(item_id: int) -> Optional[Dict]:
+    """Get a single item by id."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('SELECT * FROM lost_found_items WHERE id = ?', (item_id,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        keys = ['id', 'type', 'item_name', 'category', 'location', 'description', 'reporter_name', 'reporter_contact', 'date', 'status', 'matched_with', 'verification_code', 'image_path']
+        return dict(zip(keys, row))
+    return None
+
+def update_item_status(item_id: int, status: str, matched_with: Optional[int] = None):
+    """Update the status and optionally matched_with for an item."""
+    conn = _get_conn()
+    c = conn.cursor()
+    if matched_with is not None:
+        c.execute('UPDATE lost_found_items SET status = ?, matched_with = ? WHERE id = ?', (status, matched_with, item_id))
+    else:
+        c.execute('UPDATE lost_found_items SET status = ? WHERE id = ?', (status, item_id))
+    conn.commit()
+    conn.close()
+
+def delete_item(item_id: int):
+    """Delete an item from the database."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('DELETE FROM lost_found_items WHERE id = ?', (item_id,))
+    conn.commit()
+    conn.close()
 
 def get_next_id() -> int:
     """Generate next unique ID for items"""

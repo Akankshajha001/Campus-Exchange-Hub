@@ -3,6 +3,19 @@ Lost & Found UI - User interface for lost and found items
 """
 
 import streamlit as st
+st.markdown(
+    """
+    <style>
+    /* Make all Streamlit form labels dark and bold */
+    label, .stTextInput label, .stSelectbox label, .stTextArea label, .css-1c7y2kd, .css-1n76uvr {
+        color: #222 !important;
+        font-weight: 700 !important;
+        background: transparent !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 import os
 from datetime import datetime
 from services.lost_found_service import (

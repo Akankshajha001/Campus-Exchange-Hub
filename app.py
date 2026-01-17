@@ -7,141 +7,19 @@ Description: Campus utility platform using in-memory Python data structures
 """
 
 import streamlit as st
-from database.users_db import set_current_user, get_current_user, is_logged_in, logout
+from database.users_db import signup_user, login_user, get_user_by_id
 from ui.dashboard_ui import render_dashboard
 from ui.lost_found_ui import render_lost_found
 from ui.notes_ui import render_notes_exchange
 from utils.validators import validate_name, validate_email, validate_roll_no
 
-# Page Configuration
-st.set_page_config(
-    page_title="Campus Exchange Hub",
-    page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
-# Custom CSS for attractive UI
 def load_custom_css():
+    """Inject custom CSS for the app (placeholder)."""
     st.markdown("""
         <style>
-        /* Import Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        /* Global Styles */
-        .stApp {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        /* Hide Streamlit Branding */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        
-        /* Button Styling */
-        .stButton > button {
-            border-radius: 10px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        
-        .stButton > button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-        }
-        
-        /* Input Styling */
-        .stTextInput > div > div > input,
-        .stTextArea > div > div > textarea,
-        .stSelectbox > div > div > select {
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-            transition: border-color 0.3s ease;
-        }
-        
-        .stTextInput > div > div > input:focus,
-        .stTextArea > div > div > textarea:focus {
-            border-color: #1E88E5;
-            box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
-        }
-        
-        /* Sidebar Styling */
-        .css-1d391kg {
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        [data-testid="stSidebar"] .stMarkdown {
-            color: white;
-        }
-        
-        /* Metric Styling */
-        [data-testid="stMetricValue"] {
-            font-size: 2rem;
-            font-weight: 700;
-        }
-        
-        /* Tab Styling */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 10px;
-        }
-        
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 10px 10px 0 0;
-            padding: 10px 20px;
-            font-weight: 600;
-        }
-        
-        /* Card Hover Effect */
-        div[style*="box-shadow"]:hover {
-            transform: translateY(-5px);
-            transition: transform 0.3s ease;
-        }
-        
-        /* Success/Error Messages */
-        .stSuccess, .stError, .stWarning, .stInfo {
-            border-radius: 10px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-        
-        /* Form Styling */
-        .stForm {
-            background: #f8f9fa;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-        }
-        
-        /* Expander Styling */
-        .streamlit-expanderHeader {
-            border-radius: 10px;
-            font-weight: 600;
-        }
-        
-        /* Scrollbar Styling */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
+        /* Example: Make sidebar background dark */
+        .css-1d391kg { background: #222 !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -157,76 +35,89 @@ def render_sidebar():
             </div>
             <hr style='border: 1px solid rgba(255,255,255,0.3); margin: 1rem 0;'>
         """, unsafe_allow_html=True)
-        
-        # User Login Section
-        if not is_logged_in():
-            st.markdown("""
-                <div style='color: white; padding: 1rem 0;'>
-                    <h3 style='margin: 0; font-size: 1.2rem;'>👤 User Login</h3>
-                    <p style='margin: 0.5rem 0 0 0; opacity: 0.8; font-size: 0.9rem;'>
-                        Sign in to access all features
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            with st.form("login_form"):
-                name = st.text_input("Name", placeholder="Enter your name")
-                roll_no = st.text_input("Roll Number", placeholder="e.g., 2021-CS-001")
-                email = st.text_input("Email", placeholder="your.email@example.com")
-                
-                login_btn = st.form_submit_button("🚀 Sign In", width='stretch')
-                
-                if login_btn:
-                    # Validate inputs
-                    name_valid, name_error = validate_name(name)
-                    roll_valid, roll_error = validate_roll_no(roll_no)
-                    email_valid, email_error = validate_email(email)
-                    
-                    if not name_valid:
-                        st.error(name_error)
-                    elif not roll_valid:
-                        st.error(roll_error)
-                    elif not email_valid:
-                        st.error(email_error)
-                    else:
-                        set_current_user(name, roll_no, email)
-                        st.success(f"Welcome, {name}! 🎉")
-                        st.rerun()
+
+        # User session state
+        if 'user' not in st.session_state:
+            st.session_state.user = None
+
+        if st.session_state.user is None:
+            tabs = st.tabs(["Login", "Sign Up"])
+            with tabs[0]:
+                st.markdown("<h3 style='color: white;'>👤 Login</h3>", unsafe_allow_html=True)
+                with st.form("sidebar_login_form"):
+                    email = st.text_input("Email", placeholder="your.email@example.com")
+                    password = st.text_input("Password", type="password", placeholder="Enter your password")
+                    login_btn = st.form_submit_button("🚀 Login", use_container_width=True)
+                    if login_btn:
+                        email_valid, email_error = validate_email(email)
+                        if not email_valid:
+                            st.error(email_error)
+                        else:
+                            user = login_user(email, password)
+                            if user:
+                                st.session_state.user = user
+                                st.success(f"Welcome, {user['name']}! 🎉")
+                                st.rerun()
+                            else:
+                                st.error("Invalid email or password.")
+            with tabs[1]:
+                st.markdown("<h3 style='color: white;'>📝 Sign Up</h3>", unsafe_allow_html=True)
+                with st.form("sidebar_signup_form"):
+                    name = st.text_input("Name", placeholder="Enter your name")
+                    roll_no = st.text_input("Roll Number", placeholder="e.g., 2021-CS-001")
+                    email = st.text_input("Email", placeholder="your.email@example.com")
+                    password = st.text_input("Password", type="password", placeholder="Create a password")
+                    signup_btn = st.form_submit_button("📝 Sign Up", use_container_width=True)
+                    if signup_btn:
+                        name_valid, name_error = validate_name(name)
+                        roll_valid, roll_error = validate_roll_no(roll_no)
+                        email_valid, email_error = validate_email(email)
+                        if not name_valid:
+                            st.error(name_error)
+                        elif not roll_valid:
+                            st.error(roll_error)
+                        elif not email_valid:
+                            st.error(email_error)
+                        elif not password or len(password) < 6:
+                            st.error("Password must be at least 6 characters.")
+                        else:
+                            success = signup_user(name, roll_no, email, password)
+                            if success:
+                                st.success("Signup successful! Please login.")
+                            else:
+                                st.error("Email or roll number already exists.")
         else:
-            # User Info Display
-            user = get_current_user()
+            user = st.session_state.user
             st.markdown(f"""
                 <div style='background: rgba(255,255,255,0.1); padding: 1rem; 
                             border-radius: 10px; color: white; margin-bottom: 1rem;'>
                     <h3 style='margin: 0; font-size: 1.2rem;'>👤 {user['name']}</h3>
                     <p style='margin: 0.5rem 0 0 0; opacity: 0.8; font-size: 0.9rem;'>
-                        Roll: {user['roll_no']}<br>
-                        Email: {user['email']}
+                        Email: {user['email']}<br>
+                        Roll: {user['roll_no']}
                     </p>
                 </div>
             """, unsafe_allow_html=True)
-            
-            if st.button("🚪 Logout", width='stretch'):
-                logout()
+            if st.button("🚪 Logout", use_container_width=True):
+                st.session_state.user = None
                 st.success("Logged out successfully!")
                 st.rerun()
-        
+
         st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.3); margin: 1.5rem 0;'>", unsafe_allow_html=True)
-        
+
         # Navigation
         st.markdown("""
             <div style='color: white; padding: 0.5rem 0;'>
                 <h3 style='margin: 0; font-size: 1.2rem;'>📍 Navigation</h3>
             </div>
         """, unsafe_allow_html=True)
-        
+
         # Initialize page state if not exists
         if 'page' not in st.session_state:
             st.session_state.page = 'dashboard'
-        
+
         # Navigation Buttons with custom styling
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             if st.button("🏠", help="Dashboard", width='stretch'):
                 st.session_state.page = 'dashboard'

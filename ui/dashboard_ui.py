@@ -223,33 +223,33 @@ def render_dashboard():
     """, unsafe_allow_html=True)
     
     # Check if user is logged in
-    from database.users_db import is_logged_in
+    is_logged_in = 'user' in st.session_state and st.session_state.user is not None
     
-    if not is_logged_in():
+    if not is_logged_in:
         st.warning("⚠️ Please login from the sidebar to access Lost & Found and Notes Exchange features.")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("📢 Report Lost Item", width='stretch', disabled=not is_logged_in()):
+        if st.button("📢 Report Lost Item", width='stretch', disabled=not is_logged_in):
             st.session_state.page = 'lost_found'
             st.session_state.lf_action = 'report_lost'
             st.rerun()
     
     with col2:
-        if st.button("✅ Report Found Item", width='stretch', disabled=not is_logged_in()):
+        if st.button("✅ Report Found Item", width='stretch', disabled=not is_logged_in):
             st.session_state.page = 'lost_found'
             st.session_state.lf_action = 'report_found'
             st.rerun()
     
     with col3:
-        if st.button("📤 Upload Notes", width='stretch', disabled=not is_logged_in()):
+        if st.button("📤 Upload Notes", width='stretch', disabled=not is_logged_in):
             st.session_state.page = 'notes'
             st.session_state.notes_action = 'upload'
             st.rerun()
     
     with col4:
-        if st.button("📥 Browse Notes", width='stretch', disabled=not is_logged_in()):
+        if st.button("📥 Browse Notes", width='stretch', disabled=not is_logged_in):
             st.session_state.page = 'notes'
             st.session_state.notes_action = 'browse'
             st.rerun()

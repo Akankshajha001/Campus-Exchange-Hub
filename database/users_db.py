@@ -1,10 +1,12 @@
+
 """
-User and Session Database - SQLite persistent user tracking
+User Database - SQLite persistent user management with signup/login
 """
 
 import sqlite3
 from typing import Dict, Optional
 import os
+import hashlib
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'users.db')
 
@@ -14,99 +16,104 @@ def _get_conn():
 def _init_db():
     conn = _get_conn()
     c = conn.cursor()
+    
+    # Check if users table exists and has correct schema
+    try:
+        c.execute("SELECT id, name, roll_no, email, password_hash FROM users LIMIT 1")
+    except sqlite3.OperationalError:
+        # Table doesn't exist or has wrong schema - drop and recreate
+        c.execute("DROP TABLE IF EXISTS user_activity")
+        c.execute("DROP TABLE IF EXISTS users")
+    
     c.execute('''CREATE TABLE IF NOT EXISTS users (
-        session_id TEXT PRIMARY KEY,
-        name TEXT,
-        roll_no TEXT,
-        email TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        roll_no TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS user_activity (
-        session_id TEXT PRIMARY KEY,
+        user_id INTEGER PRIMARY KEY,
         items_reported INTEGER DEFAULT 0,
         notes_uploaded INTEGER DEFAULT 0,
         notes_downloaded INTEGER DEFAULT 0,
-        FOREIGN KEY(session_id) REFERENCES users(session_id)
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS current_user (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        session_id TEXT
-    )''')
-    # Ensure there is always one row in current_user
-    c.execute('INSERT OR IGNORE INTO current_user (id, session_id) VALUES (1, NULL)')
     conn.commit()
     conn.close()
 
 _init_db()
 
-def set_current_user(name: str, roll_no: str, email: str):
-    """Set the current user information and track in DB"""
-    session_id = f"{roll_no}_{name.replace(' ', '_')}"
-    conn = _get_conn()
-    c = conn.cursor()
-    # Insert or update user
-    c.execute('''INSERT OR REPLACE INTO users (session_id, name, roll_no, email) VALUES (?, ?, ?, ?)''',
-              (session_id, name, roll_no, email))
-    # Insert activity row if not exists
-    c.execute('''INSERT OR IGNORE INTO user_activity (session_id) VALUES (?)''', (session_id,))
-    # Set current user
-    c.execute('''UPDATE current_user SET session_id = ? WHERE id = 1''', (session_id,))
-    conn.commit()
-    conn.close()
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-def get_current_user() -> Dict:
-    """Get current user information from DB"""
+def signup_user(name: str, roll_no: str, email: str, password: str) -> bool:
+    """Register a new user. Returns True if successful, False if user/email/roll exists."""
     conn = _get_conn()
     c = conn.cursor()
-    c.execute('SELECT session_id FROM current_user WHERE id = 1')
-    row = c.fetchone()
-    if not row or not row[0]:
+    try:
+        c.execute('''INSERT INTO users (name, roll_no, email, password_hash) VALUES (?, ?, ?, ?)''',
+                  (name, roll_no, email, hash_password(password)))
+        user_id = c.lastrowid
+        c.execute('''INSERT INTO user_activity (user_id) VALUES (?)''', (user_id,))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
         conn.close()
-        return {'name': None, 'roll_no': None, 'email': None, 'session_id': None}
-    session_id = row[0]
-    c.execute('SELECT name, roll_no, email FROM users WHERE session_id = ?', (session_id,))
-    user_row = c.fetchone()
-    conn.close()
-    if user_row:
-        return {'name': user_row[0], 'roll_no': user_row[1], 'email': user_row[2], 'session_id': session_id}
-    else:
-        return {'name': None, 'roll_no': None, 'email': None, 'session_id': None}
 
-def is_logged_in() -> bool:
-    """Check if a user is logged in (in DB)"""
-    user = get_current_user()
-    return user['name'] is not None
-
-def logout():
-    """Logout current user (in DB)"""
+def login_user(email_or_roll: str, password: str) -> Optional[Dict]:
+    """Authenticate user by email or roll_no and password. Returns user dict if valid, else None."""
     conn = _get_conn()
     c = conn.cursor()
-    c.execute('UPDATE current_user SET session_id = NULL WHERE id = 1')
-    conn.commit()
+    c.execute('''SELECT id, name, roll_no, email, password_hash FROM users WHERE email = ? OR roll_no = ?''',
+              (email_or_roll, email_or_roll))
+    row = c.fetchone()
     conn.close()
+    if row and row[4] == hash_password(password):
+        return {'id': row[0], 'name': row[1], 'roll_no': row[2], 'email': row[3]}
+    return None
 
-def update_user_activity(activity_type: str):
-    """Update user activity count in DB"""
-    user = get_current_user()
-    session_id = user['session_id']
-    if not session_id:
-        return
+def get_user_by_id(user_id: int) -> Optional[Dict]:
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('SELECT id, name, roll_no, email FROM users WHERE id = ?', (user_id,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return {'id': row[0], 'name': row[1], 'roll_no': row[2], 'email': row[3]}
+    return None
+
+def get_user_by_email(email: str) -> Optional[Dict]:
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('SELECT id, name, roll_no, email FROM users WHERE email = ?', (email,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return {'id': row[0], 'name': row[1], 'roll_no': row[2], 'email': row[3]}
+    return None
+
+def update_user_activity(user_id: int, activity_type: str):
+    """Update user activity count in DB for a specific user_id"""
     conn = _get_conn()
     c = conn.cursor()
     if activity_type == 'item_reported':
-        c.execute('UPDATE user_activity SET items_reported = items_reported + 1 WHERE session_id = ?', (session_id,))
+        c.execute('UPDATE user_activity SET items_reported = items_reported + 1 WHERE user_id = ?', (user_id,))
     elif activity_type == 'note_uploaded':
-        c.execute('UPDATE user_activity SET notes_uploaded = notes_uploaded + 1 WHERE session_id = ?', (session_id,))
+        c.execute('UPDATE user_activity SET notes_uploaded = notes_uploaded + 1 WHERE user_id = ?', (user_id,))
     elif activity_type == 'note_downloaded':
-        c.execute('UPDATE user_activity SET notes_downloaded = notes_downloaded + 1 WHERE session_id = ?', (session_id,))
+        c.execute('UPDATE user_activity SET notes_downloaded = notes_downloaded + 1 WHERE user_id = ?', (user_id,))
     conn.commit()
     conn.close()
 
 def get_all_users() -> Dict:
-    """Get all user sessions and activity from DB"""
+    """Get all users and their activity from DB"""
     conn = _get_conn()
     c = conn.cursor()
-    c.execute('''SELECT u.session_id, u.name, u.roll_no, u.email, a.items_reported, a.notes_uploaded, a.notes_downloaded
-                 FROM users u LEFT JOIN user_activity a ON u.session_id = a.session_id''')
+    c.execute('''SELECT u.id, u.name, u.roll_no, u.email, a.items_reported, a.notes_uploaded, a.notes_downloaded
+                 FROM users u LEFT JOIN user_activity a ON u.id = a.user_id''')
     rows = c.fetchall()
     conn.close()
     result = {}

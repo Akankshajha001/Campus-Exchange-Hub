@@ -27,7 +27,7 @@ from services.notes_service import (
     get_recent_notes,
     get_popular_notes
 )
-from database.users_db import get_current_user, update_user_activity, is_logged_in
+from database.users_db import update_user_activity
 from utils.helpers import format_date, format_number, truncate_text
 from utils.validators import validate_name, validate_file_name, validate_description
 
@@ -39,7 +39,7 @@ def render_notes_exchange():
     """Main render function for Notes Exchange section"""
     
     # Check if user is logged in
-    if not is_logged_in():
+    if 'user' not in st.session_state or st.session_state.user is None:
         st.markdown("""
             <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
                         padding: 2rem; border-radius: 15px; color: white; 
@@ -123,10 +123,11 @@ def render_upload_notes():
             )
         
         with col2:
+            user = st.session_state.user if 'user' in st.session_state and st.session_state.user else {}
             uploaded_by = st.text_input(
                 "Your Name *",
                 placeholder="e.g., John Doe",
-                value=get_current_user().get('name', ''),
+                value=user.get('name', ''),
                 help="Your name will be credited"
             )
             

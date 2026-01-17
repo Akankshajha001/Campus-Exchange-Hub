@@ -28,7 +28,7 @@ from services.lost_found_service import (
     claim_item,
     search_items
 )
-from database.users_db import get_current_user, update_user_activity, is_logged_in
+from database.users_db import update_user_activity
 from utils.helpers import format_date, get_date_difference, truncate_text
 from utils.validators import validate_name, validate_description
 
@@ -45,7 +45,7 @@ def render_lost_found():
     """Main render function for Lost & Found section"""
     
     # Check if user is logged in
-    if not is_logged_in():
+    if 'user' not in st.session_state or st.session_state.user is None:
         st.markdown("""
             <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         padding: 2rem; border-radius: 15px; color: white; 
@@ -135,16 +135,17 @@ def render_report_lost():
             )
         
         with col2:
+            user = st.session_state.user if 'user' in st.session_state and st.session_state.user else {}
             reporter_name = st.text_input(
                 "Your Name *",
                 placeholder="e.g., John Doe",
-                value=get_current_user().get('name', '')
+                value=user.get('name', '')
             )
             
             reporter_contact = st.text_input(
                 "Contact (Email/Phone) *",
                 placeholder="e.g., john@example.com",
-                value=get_current_user().get('email', '')
+                value=user.get('email', '')
             )
         
         description = st.text_area(
@@ -260,16 +261,17 @@ def render_report_found():
             )
         
         with col2:
+            user = st.session_state.user if 'user' in st.session_state and st.session_state.user else {}
             reporter_name = st.text_input(
                 "Your Name *",
                 placeholder="e.g., Jane Smith",
-                value=get_current_user().get('name', '')
+                value=user.get('name', '')
             )
             
             reporter_contact = st.text_input(
                 "Contact (Email/Phone) *",
                 placeholder="e.g., jane@example.com",
-                value=get_current_user().get('email', '')
+                value=user.get('email', '')
             )
         
         description = st.text_area(
@@ -513,7 +515,7 @@ def render_item_card(item):
     # Claim button for open items
     if item['status'] == 'open':
         # Check if user is logged in
-        if not is_logged_in():
+        if 'user' not in st.session_state or st.session_state.user is None:
             st.warning("⚠️ Please login to claim this item")
         else:
             col1, col2, col3 = st.columns([2, 1, 1])
@@ -523,8 +525,7 @@ def render_item_card(item):
             
             # Show claim form if button clicked
             if st.session_state.get(f'claiming_{item["id"]}', False):
-                current_user = get_current_user()
-                
+                user = st.session_state.user
                 st.markdown("""
                     <div style='background: #fff3cd; padding: 1rem; border-radius: 10px; 
                                 border-left: 4px solid #ffc107; margin: 1rem 0;'>
@@ -534,13 +535,10 @@ def render_item_card(item):
                         </p>
                     </div>
                 """, unsafe_allow_html=True)
-                
                 # Show who is claiming
-                st.info(f"👤 Claiming as: **{current_user['name']}** ({current_user['email']})")
-                
+                st.info(f"👤 Claiming as: **{user['name']}** ({user['email']})")
                 with st.form(f"claim_form_{item['id']}"):
                     st.markdown("**Verification Required** ⚠️")
-                    
                     st.markdown(f"""
                         <div style='background: #fff3cd; padding: 0.8rem; border-radius: 5px; margin-bottom: 1rem;'>
                             <p style='margin: 0; color: #856404; font-size: 0.9rem;'>
@@ -549,7 +547,6 @@ def render_item_card(item):
                             </p>
                         </div>
                     """, unsafe_allow_html=True)
-                    
                     verification_code_input = st.text_input(
                         "5-Digit Verification Code *",
                         max_chars=5,
@@ -557,7 +554,6 @@ def render_item_card(item):
                         help="Contact the reporter to get this code",
                         placeholder="12345"
                     )
-                    
                     verification = st.text_area(
                         "Proof of Ownership *",
                         placeholder="Describe specific details only the owner would know...",
@@ -565,14 +561,12 @@ def render_item_card(item):
                         help="Examples: exact color, brand/model, contents, unique marks, serial number, when/where purchased, etc.",
                         height=80
                     )
-                    
                     contact = st.text_input(
                         "Contact Number *",
-                        value=current_user.get('phone', ''),
+                        value=user.get('phone', ''),
                         key=f"contact_{item['id']}",
                         help="Your contact number for verification"
                     )
-                    
                     st.markdown("""
                         <div style='background: #e3f2fd; padding: 0.8rem; border-radius: 5px; margin: 1rem 0;'>
                             <p style='margin: 0; color: #1565c0; font-size: 0.9rem;'>
@@ -581,17 +575,14 @@ def render_item_card(item):
                             </p>
                         </div>
                     """, unsafe_allow_html=True)
-                    
                     col1, col2 = st.columns(2)
                     with col1:
                         submitted = st.form_submit_button("✅ Confirm Claim", type="primary", width='stretch')
                     with col2:
                         cancel = st.form_submit_button("❌ Cancel", width='stretch')
-                    
                     if cancel:
                         st.session_state[f'claiming_{item["id"]}'] = False
                         st.rerun()
-                    
                     if submitted:
                         # Validate inputs
                         if not verification_code_input or not verification or not contact:
@@ -609,12 +600,11 @@ def render_item_card(item):
                             # Submit claim with logged-in user details
                             success = claim_item(
                                 item_id=item['id'],
-                                claimer_name=current_user['name'],
+                                claimer_name=user['name'],
                                 verification_detail=verification.strip(),
-                                claimer_email=current_user['email'],
+                                claimer_email=user['email'],
                                 claimer_contact=contact.strip()
                             )
-                            
                             if success:
                                 st.success(f"🎉 Claim submitted successfully!")
                                 st.markdown(f"""
@@ -629,15 +619,11 @@ def render_item_card(item):
                                         </p>
                                     </div>
                                 """, unsafe_allow_html=True)
-                                
                                 st.balloons()
-                                
                                 # Update user activity
                                 update_user_activity('claim_item')
-                                
                                 # Clear claiming state
                                 st.session_state[f'claiming_{item["id"]}'] = False
-                                
                                 # Wait a bit and rerun
                                 import time
                                 time.sleep(3)

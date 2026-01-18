@@ -386,12 +386,12 @@ def render_search_items():
             if lost_results:
                 st.markdown("#### 📢 Lost Items")
                 for item in lost_results:
-                    render_item_card(item)
+                    render_item_card(item, context='search_lost')
             
             if found_results:
                 st.markdown("#### ✅ Found Items")
                 for item in found_results:
-                    render_item_card(item)
+                    render_item_card(item, context='search_found')
 
 def render_all_items():
     """Display all items with filters"""
@@ -430,10 +430,15 @@ def render_all_items():
         items_sorted = sorted(items, key=lambda x: x['date'], reverse=True)
         
         for item in items_sorted:
-            render_item_card(item)
+            render_item_card(item, context='all_items')
 
-def render_item_card(item):
-    """Render a single item card"""
+def render_item_card(item, context='default'):
+    """Render a single item card
+    
+    Args:
+        item: The item dictionary to render
+        context: A unique identifier for where this card is being rendered (e.g., 'search', 'all', 'lost', 'found')
+    """
     # Determine color based on type and status
     if item['status'] == 'claimed':
         border_color = '#4caf50'
@@ -520,11 +525,11 @@ def render_item_card(item):
         else:
             col1, col2, col3 = st.columns([2, 1, 1])
             with col2:
-                if st.button(f"🏆 Claim Item #{item['id']}", key=f"claim_{item['id']}"):
-                    st.session_state[f'claiming_{item["id"]}'] = True
+                if st.button(f"🏆 Claim Item #{item['id']}", key=f"claim_{context}_{item['id']}"):
+                    st.session_state[f'claiming_{context}_{item["id"]}'] = True
             
             # Show claim form if button clicked
-            if st.session_state.get(f'claiming_{item["id"]}', False):
+            if st.session_state.get(f'claiming_{context}_{item["id"]}', False):
                 user = st.session_state.user
                 st.markdown("""
                     <div style='background: #fff3cd; padding: 1rem; border-radius: 10px; 
@@ -537,7 +542,7 @@ def render_item_card(item):
                 """, unsafe_allow_html=True)
                 # Show who is claiming
                 st.info(f"👤 Claiming as: **{user['name']}** ({user['email']})")
-                with st.form(f"claim_form_{item['id']}"):
+                with st.form(f"claim_form_{context}_{item['id']}"):
                     st.markdown("**Verification Required** ⚠️")
                     st.markdown(f"""
                         <div style='background: #fff3cd; padding: 0.8rem; border-radius: 5px; margin-bottom: 1rem;'>

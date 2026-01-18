@@ -197,7 +197,7 @@ def render_upload_notes():
                     description=description
                 )
                 
-                update_user_activity('note_uploaded')
+                update_user_activity(st.session_state.user['id'], 'note_uploaded')
                 
                 st.success("✅ Notes uploaded successfully!")
                 st.balloons()
@@ -484,12 +484,12 @@ def render_note_card(note, show_popularity=False, context='default'):
                 width='stretch'
             ):
                 increment_download_count(note['id'])
-                update_user_activity('note_downloaded')
+                update_user_activity(st.session_state.user['id'], 'note_downloaded')
         else:
             # For sample data that doesn't have actual files
             if st.button(f"📥 Download", key=f"download_{context}_{note['id']}", width='stretch'):
                 increment_download_count(note['id'])
-                update_user_activity('note_downloaded')
+                update_user_activity(st.session_state.user['id'], 'note_downloaded')
                 st.info(f"ℹ️ Sample file: {note['file_name']} (Demo mode - actual file not available)")
     
     with col2:

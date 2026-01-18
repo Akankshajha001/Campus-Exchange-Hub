@@ -205,7 +205,7 @@ def render_report_lost():
                     image_path=image_path
                 )
                 
-                update_user_activity('item_reported')
+                update_user_activity(st.session_state.user['id'], 'item_reported')
                 
                 st.success("✅ Lost item reported successfully!")
                 st.balloons()
@@ -332,7 +332,7 @@ def render_report_found():
                     image_path=image_path
                 )
                 
-                update_user_activity('item_reported')
+                update_user_activity(st.session_state.user['id'], 'item_reported')
                 
                 st.success("✅ Found item reported successfully!")
                 st.balloons()
@@ -621,7 +621,7 @@ def render_item_card(item):
                                 """, unsafe_allow_html=True)
                                 st.balloons()
                                 # Update user activity
-                                update_user_activity('claim_item')
+                                update_user_activity(st.session_state.user['id'], 'claim_item')
                                 # Clear claiming state
                                 st.session_state[f'claiming_{item["id"]}'] = False
                                 # Wait a bit and rerun

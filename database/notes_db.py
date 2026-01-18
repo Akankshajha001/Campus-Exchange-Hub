@@ -96,6 +96,25 @@ def update_rating(note_id: int, new_rating: float):
     conn.commit()
     conn.close()
 
+def delete_note(note_id: int) -> bool:
+    """Delete a note from the database. Returns True if deleted, False if not found."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('DELETE FROM notes WHERE id = ?', (note_id,))
+    deleted = c.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+def get_notes_count_by_user(uploaded_by: str) -> int:
+    """Get the actual count of notes uploaded by a specific user."""
+    conn = _get_conn()
+    c = conn.cursor()
+    c.execute('SELECT COUNT(*) FROM notes WHERE uploaded_by = ?', (uploaded_by,))
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
 
 # Counter for generating new IDs
 note_id_counter = 6

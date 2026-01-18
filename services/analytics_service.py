@@ -86,20 +86,31 @@ def get_subject_wise_stats() -> Dict[str, Dict]:
     return subject_stats
 
 def get_user_activity_stats() -> List[Dict]:
-    """Get user activity statistics from SQLite DB"""
+    """Get user activity statistics from SQLite DB with actual note counts"""
     from database.users_db import get_all_users
+    from database.notes_db import get_notes_count_by_user
+    from database.lost_found_db import get_all_items
+    
     users = get_all_users()
+    all_items = get_all_items()
     activity_list = []
-    for session_id, user_data in users.items():
+    
+    for user_id, user_data in users.items():
+        # Count actual notes uploaded by this user (by name)
+        actual_notes_count = get_notes_count_by_user(user_data['name'])
+        
+        # Count actual items reported by this user
+        actual_items_count = len([item for item in all_items if item['reporter_name'] == user_data['name']])
+        
         activity_list.append({
             'name': user_data['name'],
             'roll_no': user_data['roll_no'],
-            'items_reported': user_data['items_reported'],
-            'notes_uploaded': user_data['notes_uploaded'],
+            'items_reported': actual_items_count,
+            'notes_uploaded': actual_notes_count,
             'notes_downloaded': user_data['notes_downloaded'],
             'total_activity': (
-                user_data['items_reported'] +
-                user_data['notes_uploaded'] +
+                actual_items_count +
+                actual_notes_count +
                 user_data['notes_downloaded']
             )
         })

@@ -96,7 +96,11 @@ def get_user_by_email(email: str) -> Optional[Dict]:
     return None
 
 def update_user_activity(user_id: int, activity_type: str):
-    """Update user activity count in DB for a specific user_id"""
+    """Update user activity count in DB for a specific user_id
+    
+    Note: Only tracks notes_downloaded cumulatively. 
+    items_reported and notes_uploaded are counted from actual database records.
+    """
     if not user_id or not isinstance(user_id, (int, float)):
         return  # Skip if invalid user_id
     
@@ -108,13 +112,10 @@ def update_user_activity(user_id: int, activity_type: str):
     # Ensure user_activity record exists for this user
     c.execute('INSERT OR IGNORE INTO user_activity (user_id) VALUES (?)', (user_id,))
     
-    # Update the appropriate activity counter
-    if activity_type == 'item_reported' or activity_type == 'claim_item':
-        c.execute('UPDATE user_activity SET items_reported = items_reported + 1 WHERE user_id = ?', (user_id,))
-    elif activity_type == 'note_uploaded':
-        c.execute('UPDATE user_activity SET notes_uploaded = notes_uploaded + 1 WHERE user_id = ?', (user_id,))
-    elif activity_type == 'note_downloaded':
+    # Only track download activity (items_reported and notes_uploaded are counted from DB)
+    if activity_type == 'note_downloaded':
         c.execute('UPDATE user_activity SET notes_downloaded = notes_downloaded + 1 WHERE user_id = ?', (user_id,))
+    # item_reported and note_uploaded are now counted from actual database records, so we skip incrementing
     
     conn.commit()
     conn.close()

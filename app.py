@@ -153,29 +153,6 @@ def render_sidebar():
         
         st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.3); margin: 1.5rem 0;'>", unsafe_allow_html=True)
         
-        # Quick Stats
-        from services.analytics_service import get_lost_found_stats, get_notes_stats
-        lf_stats = get_lost_found_stats()
-        notes_stats = get_notes_stats()
-        
-        st.markdown("""
-            <div style='color: white; padding: 0.5rem 0;'>
-                <h3 style='margin: 0; font-size: 1.2rem;'>📊 Quick Stats</h3>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-            <div style='background: rgba(255,255,255,0.1); padding: 1rem; 
-                        border-radius: 10px; color: white;'>
-                <p style='margin: 0.3rem 0;'>🔍 Lost Items: <strong>{lf_stats['lost_count']}</strong></p>
-                <p style='margin: 0.3rem 0;'>✅ Found Items: <strong>{lf_stats['found_count']}</strong></p>
-                <p style='margin: 0.3rem 0;'>📚 Total Notes: <strong>{notes_stats['total_notes']}</strong></p>
-                <p style='margin: 0.3rem 0;'>📥 Downloads: <strong>{notes_stats['total_downloads']}</strong></p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        
         # Footer
         st.markdown("""
             <div style='text-align: center; color: white; opacity: 0.6; 

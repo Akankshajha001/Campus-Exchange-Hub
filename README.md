@@ -1,4 +1,4 @@
-# 🎓 Campus Exchange Hub
+# 🎓 Uni-Connect
 
 ## Lost & Found + Notes Exchange System
 
@@ -408,7 +408,7 @@ These are intentional design choices for educational purposes.
 
 For questions or improvements:
 - **Developer**: Gaurav Pathak
-- **Project**: Campus Exchange Hub
+- **Project**: Uni-Connect
 - **Version**: 1.0.0
 - **Date**: January 2026
 

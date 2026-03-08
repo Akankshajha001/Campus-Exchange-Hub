@@ -213,7 +213,7 @@ The claim system now has **multiple layers of security** that work together to p
 - Contact validation
 - Reporter review
 
-...creates a robust system that protects both reporters and claimers, building trust in the Campus Exchange Hub.
+...creates a robust system that protects both reporters and claimers, building trust in Uni-Connect.
 
 ---
 **Status:** ✅ Fully Implemented and Active

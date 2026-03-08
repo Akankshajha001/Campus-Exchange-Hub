@@ -163,7 +163,7 @@ def render_report_lost():
             label_visibility="collapsed"
         )
         
-        submit = st.form_submit_button("🚀 Submit Lost Item Report", width='stretch')
+        submit = st.form_submit_button("🚀 Submit Lost Item Report", use_container_width=True)
         
         if submit:
             # Validate inputs
@@ -290,7 +290,7 @@ def render_report_found():
             key="found_image"
         )
         
-        submit = st.form_submit_button("✅ Submit Found Item Report", width='stretch')
+        submit = st.form_submit_button("✅ Submit Found Item Report", use_container_width=True)
         
         if submit:
             # Validate inputs
@@ -369,7 +369,7 @@ def render_search_items():
         )
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        search_btn = st.button("🔍 Search", width='stretch')
+        search_btn = st.button("🔍 Search", use_container_width=True)
     
     if search_query or search_btn:
         results = search_items(search_query) if search_query else get_all_items()
@@ -582,9 +582,9 @@ def render_item_card(item, context='default'):
                     """, unsafe_allow_html=True)
                     col1, col2 = st.columns(2)
                     with col1:
-                        submitted = st.form_submit_button("✅ Confirm Claim", type="primary", width='stretch')
+                        submitted = st.form_submit_button("✅ Confirm Claim", type="primary", use_container_width=True)
                     with col2:
-                        cancel = st.form_submit_button("❌ Cancel", width='stretch')
+                        cancel = st.form_submit_button("❌ Cancel", use_container_width=True)
                     if cancel:
                         st.session_state[f'claiming_{item["id"]}'] = False
                         st.rerun()

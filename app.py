@@ -1,5 +1,5 @@
 """
-Campus Exchange Hub - Main Application Entry Point
+Uni-Connect - Main Application Entry Point
 A Streamlit-based platform for Lost & Found and Notes Exchange
 
 Author: Gaurav Pathak
@@ -30,8 +30,8 @@ def render_sidebar():
         st.markdown("""
             <div style='text-align: center; padding: 1rem 0; color: white;'>
                 <h1 style='font-size: 2.5rem; margin: 0;'>🎓</h1>
-                <h2 style='margin: 0.5rem 0; font-size: 1.5rem;'>Campus Hub</h2>
-                <p style='margin: 0; opacity: 0.8; font-size: 0.9rem;'>Exchange • Connect • Succeed</p>
+                <h2 style='margin: 0.5rem 0; font-size: 1.5rem;'>Uni-Connect</h2>
+                <p style='margin: 0; opacity: 0.8; font-size: 0.9rem;'>Connect • Share • Succeed</p>
             </div>
             <hr style='border: 1px solid rgba(255,255,255,0.3); margin: 1rem 0;'>
         """, unsafe_allow_html=True)
@@ -119,34 +119,34 @@ def render_sidebar():
         # Navigation Buttons with custom styling
         col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button("🏠", help="Dashboard", width='stretch'):
+            if st.button("🏠", help="Dashboard", use_container_width=True):
                 st.session_state.page = 'dashboard'
                 st.rerun()
         
         with col2:
-            if st.button("🔍", help="Lost & Found", width='stretch'):
+            if st.button("🔍", help="Lost & Found", use_container_width=True):
                 st.session_state.page = 'lost_found'
                 st.rerun()
         
         with col3:
-            if st.button("📚", help="Notes", width='stretch'):
+            if st.button("📚", help="Notes", use_container_width=True):
                 st.session_state.page = 'notes'
                 st.rerun()
         
         st.markdown("<br>", unsafe_allow_html=True)
         
         # Full width navigation buttons
-        if st.button("🏠 Dashboard", width='stretch', 
+        if st.button("🏠 Dashboard", use_container_width=True, 
                      type="primary" if st.session_state.page == 'dashboard' else "secondary"):
             st.session_state.page = 'dashboard'
             st.rerun()
         
-        if st.button("🔍 Lost & Found", width='stretch',
+        if st.button("🔍 Lost & Found", use_container_width=True,
                      type="primary" if st.session_state.page == 'lost_found' else "secondary"):
             st.session_state.page = 'lost_found'
             st.rerun()
         
-        if st.button("📚 Notes Exchange", width='stretch',
+        if st.button("📚 Notes Exchange", use_container_width=True,
                      type="primary" if st.session_state.page == 'notes' else "secondary"):
             st.session_state.page = 'notes'
             st.rerun()
@@ -180,7 +180,7 @@ def render_sidebar():
         st.markdown("""
             <div style='text-align: center; color: white; opacity: 0.6; 
                         font-size: 0.8rem; padding: 1rem 0;'>
-                <p style='margin: 0;'>Campus Exchange Hub v1.0</p>
+                <p style='margin: 0;'>Uni-Connect v2.0</p>
                 <p style='margin: 0;'>Made with ❤️ using Streamlit</p>
                 <p style='margin: 0;'>© 2026 - All rights reserved</p>
             </div>

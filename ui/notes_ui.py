@@ -146,7 +146,7 @@ def render_upload_notes():
             help="Help others understand what's in your notes"
         )
         
-        submit = st.form_submit_button("🚀 Upload Notes", width='stretch')
+        submit = st.form_submit_button("🚀 Upload Notes", use_container_width=True)
         
         if submit:
             # Validate inputs
@@ -319,7 +319,7 @@ def render_search_notes():
         )
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        search_btn = st.button("🔍 Search", width='stretch')
+        search_btn = st.button("🔍 Search", use_container_width=True)
     
     if search_query or search_btn:
         results = search_notes(search_query) if search_query else get_all_notes_list()
@@ -481,19 +481,19 @@ def render_note_card(note, show_popularity=False, context='default'):
                 file_name=note['file_name'],
                 mime="application/octet-stream",
                 key=f"download_{context}_{note['id']}",
-                width='stretch'
+                use_container_width=True
             ):
                 increment_download_count(note['id'])
                 update_user_activity(st.session_state.user['id'], 'note_downloaded')
         else:
             # For sample data that doesn't have actual files
-            if st.button(f"📥 Download", key=f"download_{context}_{note['id']}", width='stretch'):
+            if st.button(f"📥 Download", key=f"download_{context}_{note['id']}", use_container_width=True):
                 increment_download_count(note['id'])
                 update_user_activity(st.session_state.user['id'], 'note_downloaded')
                 st.info(f"ℹ️ Sample file: {note['file_name']} (Demo mode - actual file not available)")
     
     with col2:
-        if st.button(f"ℹ️ Details", key=f"details_{context}_{note['id']}", width='stretch'):
+        if st.button(f"ℹ️ Details", key=f"details_{context}_{note['id']}", use_container_width=True):
             st.session_state[f'show_details_{context}_{note["id"]}'] = True
     
     # Show details if button clicked

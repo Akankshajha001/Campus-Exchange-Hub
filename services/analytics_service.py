@@ -21,6 +21,7 @@ def get_lost_found_stats() -> Dict:
         'found_count': found_count,
         'open_count': open_count,
         'claimed_count': claimed_count,
+        'claimed': claimed_count,
         'match_rate': round((claimed_count / total_items * 100) if total_items > 0 else 0, 2)
     }
 
@@ -58,10 +59,6 @@ def get_location_distribution() -> Dict[str, int]:
         location = item['location']
         locations[location] = locations.get(location, 0) + 1
     return dict(sorted(locations.items(), key=lambda x: x[1], reverse=True))
-    
-    # Sort by count
-    sorted_locations = dict(sorted(locations.items(), key=lambda x: x[1], reverse=True))
-    return sorted_locations
 
 def get_top_downloaded_notes(limit: int = 10) -> List[Dict]:
     """Get top downloaded notes from SQLite DB"""

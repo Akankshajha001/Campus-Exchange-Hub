@@ -3,19 +3,6 @@ Notes Exchange UI - User interface for notes sharing
 """
 
 import streamlit as st
-st.markdown(
-    """
-    <style>
-    /* Make all Streamlit form labels dark and bold */
-    label, .stTextInput label, .stSelectbox label, .stTextArea label, .css-1c7y2kd, .css-1n76uvr {
-        color: #222 !important;
-        font-weight: 700 !important;
-        background: transparent !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 from services.notes_service import (
     upload_note,
     get_notes_by_subject,
@@ -187,14 +174,15 @@ def render_upload_notes():
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 
-                # Upload note with file path
+                # Upload note with file path stored in database
                 note = upload_note(
                     subject=subject,
                     topic=topic,
                     semester=semester,
                     uploaded_by=uploaded_by,
                     file_name=file_name,
-                    description=description
+                    description=description,
+                    file_path=file_path  # Store full path in database
                 )
                 
                 update_user_activity(st.session_state.user['id'], 'note_uploaded')
@@ -466,11 +454,11 @@ def render_note_card(note, show_popularity=False, context='default'):
     # Download button
     col1, col2 = st.columns(2)
     with col1:
-        # Check if file exists
+        # Check if file exists - use file_path from database if available
         import os
-        file_path = os.path.join("uploaded_notes", note['file_name'])
+        file_path = note.get('file_path') or os.path.join("uploaded_notes", note['file_name'])
         
-        if os.path.exists(file_path):
+        if file_path and os.path.exists(file_path):
             # Read file for download
             with open(file_path, "rb") as file:
                 file_data = file.read()

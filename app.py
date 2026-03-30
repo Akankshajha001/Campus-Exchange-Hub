@@ -11,7 +11,7 @@ from database.users_db import signup_user, login_user, get_user_by_id
 from ui.dashboard_ui import render_dashboard
 from ui.lost_found_ui import render_lost_found
 from ui.notes_ui import render_notes_exchange
-from utils.validators import validate_name, validate_email, validate_roll_no
+from utils.validators import validate_name, validate_email, validate_roll_no, validate_password
 
 
 def load_custom_css():
@@ -72,14 +72,15 @@ def render_sidebar():
                         name_valid, name_error = validate_name(name)
                         roll_valid, roll_error = validate_roll_no(roll_no)
                         email_valid, email_error = validate_email(email)
+                        password_valid, password_error = validate_password(password)
                         if not name_valid:
                             st.error(name_error)
                         elif not roll_valid:
                             st.error(roll_error)
                         elif not email_valid:
                             st.error(email_error)
-                        elif not password or len(password) < 6:
-                            st.error("Password must be at least 6 characters.")
+                        elif not password_valid:
+                            st.error(password_error)
                         else:
                             success = signup_user(name, roll_no, email, password)
                             if success:

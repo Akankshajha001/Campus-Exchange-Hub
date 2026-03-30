@@ -7,7 +7,7 @@ from typing import List, Dict, Optional
 from database import notes_db
 
 def upload_note(subject: str, topic: str, semester: str, uploaded_by: str,
-                file_name: str, description: str) -> Dict:
+                file_name: str, description: str, file_path: str = "") -> Dict:
     """Upload a new note to the database (SQLite)"""
     note = {
         'subject': subject,
@@ -15,6 +15,7 @@ def upload_note(subject: str, topic: str, semester: str, uploaded_by: str,
         'semester': semester,
         'uploaded_by': uploaded_by,
         'file_name': file_name,
+        'file_path': file_path,
         'description': description
     }
     note_id = notes_db.add_note(note)

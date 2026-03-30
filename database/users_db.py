@@ -1,12 +1,20 @@
 
 """
 User Database - SQLite persistent user management with signup/login
+Industry-standard security with bcrypt password hashing
 """
 
 import sqlite3
 from typing import Dict, Optional
 import os
-import hashlib
+
+# Try to use bcrypt (industry standard), fallback to hashlib if not available
+try:
+    import bcrypt
+    USE_BCRYPT = True
+except ImportError:
+    import hashlib 
+    USE_BCRYPT = False
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'users.db')
 
@@ -21,7 +29,6 @@ def _init_db():
     try:
         c.execute("SELECT id, name, roll_no, email, password_hash FROM users LIMIT 1")
     except sqlite3.OperationalError:
-        # Table doesn't exist or has wrong schema - drop and recreate
         c.execute("DROP TABLE IF EXISTS user_activity")
         c.execute("DROP TABLE IF EXISTS users")
     
@@ -30,7 +37,9 @@ def _init_db():
         name TEXT NOT NULL,
         roll_no TEXT NOT NULL UNIQUE,
         email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL
+        password_hash TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        last_login TEXT
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS user_activity (
         user_id INTEGER PRIMARY KEY,
@@ -39,13 +48,40 @@ def _init_db():
         notes_downloaded INTEGER DEFAULT 0,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
+    # Add new columns if they don't exist
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP')
+    except sqlite3.OperationalError:
+        pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN last_login TEXT')
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
 _init_db()
 
 def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+    """Hash password using bcrypt (industry standard) or SHA256 fallback"""
+    if USE_BCRYPT:
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    else:
+        import hashlib
+        return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against hash"""
+    if USE_BCRYPT:
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        except ValueError:
+            # Old SHA256 hash - verify with SHA256
+            import hashlib
+            return hashlib.sha256(password.encode('utf-8')).hexdigest() == hashed
+    else:
+        import hashlib
+        return hashlib.sha256(password.encode('utf-8')).hexdigest() == hashed
 
 def signup_user(name: str, roll_no: str, email: str, password: str) -> bool:
     """Register a new user. Returns True if successful, False if user/email/roll exists."""
@@ -70,9 +106,13 @@ def login_user(email_or_roll: str, password: str) -> Optional[Dict]:
     c.execute('''SELECT id, name, roll_no, email, password_hash FROM users WHERE email = ? OR roll_no = ?''',
               (email_or_roll, email_or_roll))
     row = c.fetchone()
-    conn.close()
-    if row and row[4] == hash_password(password):
+    if row and verify_password(password, row[4]):
+        # Update last login time
+        c.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', (row[0],))
+        conn.commit()
+        conn.close()
         return {'id': row[0], 'name': row[1], 'roll_no': row[2], 'email': row[3]}
+    conn.close()
     return None
 
 def get_user_by_id(user_id: int) -> Optional[Dict]:

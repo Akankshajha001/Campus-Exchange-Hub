@@ -22,11 +22,17 @@ def _init_db():
         semester TEXT,
         uploaded_by TEXT,
         file_name TEXT,
+        file_path TEXT,
         description TEXT,
         upload_date TEXT,
         downloads INTEGER DEFAULT 0,
         rating REAL DEFAULT 0.0
     )''')
+    # Add file_path column if it doesn't exist
+    try:
+        c.execute('ALTER TABLE notes ADD COLUMN file_path TEXT')
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -37,10 +43,11 @@ def add_note(note: Dict) -> int:
     conn = _get_conn()
     c = conn.cursor()
     c.execute('''INSERT INTO notes (
-        subject, topic, semester, uploaded_by, file_name, description, upload_date, downloads, rating
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        subject, topic, semester, uploaded_by, file_name, file_path, description, upload_date, downloads, rating
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
         note['subject'], note['topic'], note['semester'], note['uploaded_by'], note['file_name'],
-        note['description'], note.get('upload_date', datetime.now().strftime('%Y-%m-%d')),
+        note.get('file_path', ''), note['description'], 
+        note.get('upload_date', datetime.now().strftime('%Y-%m-%d')),
         note.get('downloads', 0), note.get('rating', 0.0)
     ))
     note_id = c.lastrowid
@@ -52,31 +59,31 @@ def get_all_notes() -> List[Dict]:
     """Get all notes from the database."""
     conn = _get_conn()
     c = conn.cursor()
-    c.execute('SELECT * FROM notes')
+    c.execute('SELECT id, subject, topic, semester, uploaded_by, file_name, file_path, description, upload_date, downloads, rating FROM notes')
     rows = c.fetchall()
     conn.close()
-    keys = ['id', 'subject', 'topic', 'semester', 'uploaded_by', 'file_name', 'description', 'upload_date', 'downloads', 'rating']
+    keys = ['id', 'subject', 'topic', 'semester', 'uploaded_by', 'file_name', 'file_path', 'description', 'upload_date', 'downloads', 'rating']
     return [dict(zip(keys, row)) for row in rows]
 
 def get_notes_by_subject(subject: str) -> List[Dict]:
     """Get all notes for a given subject."""
     conn = _get_conn()
     c = conn.cursor()
-    c.execute('SELECT * FROM notes WHERE subject = ?', (subject,))
+    c.execute('SELECT id, subject, topic, semester, uploaded_by, file_name, file_path, description, upload_date, downloads, rating FROM notes WHERE subject = ?', (subject,))
     rows = c.fetchall()
     conn.close()
-    keys = ['id', 'subject', 'topic', 'semester', 'uploaded_by', 'file_name', 'description', 'upload_date', 'downloads', 'rating']
+    keys = ['id', 'subject', 'topic', 'semester', 'uploaded_by', 'file_name', 'file_path', 'description', 'upload_date', 'downloads', 'rating']
     return [dict(zip(keys, row)) for row in rows]
 
 def get_note_by_id(note_id: int) -> Optional[Dict]:
     """Get a single note by id."""
     conn = _get_conn()
     c = conn.cursor()
-    c.execute('SELECT * FROM notes WHERE id = ?', (note_id,))
+    c.execute('SELECT id, subject, topic, semester, uploaded_by, file_name, file_path, description, upload_date, downloads, rating FROM notes WHERE id = ?', (note_id,))
     row = c.fetchone()
     conn.close()
     if row:
-        keys = ['id', 'subject', 'topic', 'semester', 'uploaded_by', 'file_name', 'description', 'upload_date', 'downloads', 'rating']
+        keys = ['id', 'subject', 'topic', 'semester', 'uploaded_by', 'file_name', 'file_path', 'description', 'upload_date', 'downloads', 'rating']
         return dict(zip(keys, row))
     return None
 
